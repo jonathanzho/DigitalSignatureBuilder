@@ -35,30 +35,32 @@ public class DigitalSignatureUtils {
   public static byte[] encodeSignature(final boolean allowed, final String imei, final int timestamp) {
     Log.d(TAG, "encodeSignature: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
 
-    byte[] signature = new byte[20];
+    byte[] inSignature = new byte[20];
 
     int byteCount = 0;
 
-    signature[byteCount++] = (byte) (allowed ? 1 : 0);
+    inSignature[byteCount++] = (byte) (allowed ? 1 : 0);
 
     for (int i = 0; i < imei.length(); i++) {
-      signature[byteCount++] = (byte) imei.charAt(i);
+      inSignature[byteCount++] = (byte) imei.charAt(i);
     }
 
     byte[] timestampBytes = intToBytesBE(timestamp);
     for (int i = 0; i < timestampBytes.length; i++) {
-      signature[byteCount++] = timestampBytes[i];
+      inSignature[byteCount++] = timestampBytes[i];
     }
 
     PrivateKey privateKey = importPrivateKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE);
+
+    byte[] outSignature = inSignature;
 /*
-    generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
+    byte[] outSignature = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         privateKey,
-        signature);
+        inSignature);
 */
-    return signature;
+    return outSignature;
   }
 
   public static void decodeSignature(final byte[] signature) {
@@ -109,21 +111,23 @@ public class DigitalSignatureUtils {
     return privateKey;
   }
 
-  private static void generateSignature(final String algorithm,
+  private static byte[] generateSignature(final String algorithm,
                                         final String provider,
                                         final PrivateKey privateKey,
-                                        byte[] dataBytes) {
+                                        final byte[] inSignature) {
     Log.d(TAG, "generateSignature: algorithm=[" + algorithm + "], provider=[" + provider + "], privateKey=[" +
-        privateKey + "], dataBytes.length=[" + dataBytes.length + "]");
+        privateKey + "], inSignature.length=[" + inSignature.length + "]");
 
-    int numBytesSigned = 0;
+    byte[] outSignature = null;
+
     try {
       Signature signature = Signature.getInstance(algorithm, provider);
       try {
         signature.initSign(privateKey);
-
         try {
-          numBytesSigned = signature.sign(dataBytes, 0, dataBytes.length);
+          signature.update(inSignature);
+
+          outSignature = signature.sign();
         } catch (SignatureException e) {
           e.printStackTrace();
         }
@@ -136,6 +140,8 @@ public class DigitalSignatureUtils {
       e.printStackTrace();
     }
 
-    Log.v(TAG, "generateSignature: numBytesSigned=[" + numBytesSigned + "]");
+    Log.v(TAG, "generateSignature: outSignature.length=[" + outSignature.length + "]");
+
+    return outSignature;
   }
 }

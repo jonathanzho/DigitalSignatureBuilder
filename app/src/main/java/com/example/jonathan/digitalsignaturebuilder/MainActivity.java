@@ -16,9 +16,9 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    byte [] signature = DigitalSignatureUtils.encodeSignature(ConstantsUtils.ALLOWED,
-        ConstantsUtils.IMEI,
-        ConstantsUtils.TIMESTAMP);
+    byte [] signature = DigitalSignatureUtils.encodeSignature(ConstantsUtils.TEST_ALLOWED,
+        ConstantsUtils.TEST_IMEI,
+        ConstantsUtils.TEST_IMESTAMP);
 
     DigitalSignatureUtils.decodeSignature(signature);
   }
