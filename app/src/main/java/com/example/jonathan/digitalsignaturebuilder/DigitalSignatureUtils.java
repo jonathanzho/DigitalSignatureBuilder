@@ -4,8 +4,21 @@ import android.util.Log;
 
 import com.example.jonathan.digitalsignaturebuilder.utils.ConstantsUtils;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.KeyFactory;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Arrays;
 
 public class DigitalSignatureUtils {
@@ -36,7 +49,15 @@ public class DigitalSignatureUtils {
     for (int i = 0; i < timestampBytes.length; i++) {
       signature[byteCount++] = timestampBytes[i];
     }
+/* ???
+    PrivateKey privateKey = importPrivateKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_FILE_PATH,
+        ConstantsUtils.ACCESS_SIGNATURE_TYPE);
 
+    generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
+        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
+        privateKey,
+        signature);
+*/
     return signature;
   }
 
@@ -52,5 +73,69 @@ public class DigitalSignatureUtils {
     int timestamp = bytesToIntBE(timestampBytes);
 
     Log.v(TAG, "decodeSignature: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
+  }
+
+  private static PrivateKey importPrivateKeyFromFile(final String filePath, final String type) {
+    Log.d(TAG, "importPrivateKeyFromFile: filePath={" + filePath + "], type=[" + type + "]");
+
+    PrivateKey privateKey = null;
+
+    Path path = Paths.get(filePath);
+
+    try {
+      byte[] privateBytes = Files.readAllBytes(path);
+
+      PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateBytes);
+
+      try {
+        KeyFactory keyFactory = KeyFactory.getInstance(type);
+
+        try {
+          privateKey = keyFactory.generatePrivate(keySpec);
+        } catch (InvalidKeySpecException e) {
+          e.printStackTrace();
+        }
+      } catch (NoSuchAlgorithmException e) {
+        e.printStackTrace();
+      }
+
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    Log.v(TAG, "importPrivateKeyFromFile: privateKey={" + privateKey + "]");
+
+    return privateKey;
+  }
+
+  private static void generateSignature(final String algorithm,
+                                        final String provider,
+                                        final PrivateKey privateKey,
+                                        byte[] dataBytes) {
+    Log.d(TAG, "generateSignature: algorithm=[" + algorithm + "], provider=[" + provider + "], privateKey=[" +
+        privateKey + "], dataBytes.length=[" + dataBytes.length + "]");
+
+    int numBytesSigned = 0;
+    try {
+      Signature signature = Signature.getInstance(algorithm, provider);
+      try {
+        signature.initSign(privateKey);
+
+        try {
+          numBytesSigned = signature.sign(dataBytes, 0, dataBytes.length);
+        } catch (SignatureException e) {
+          e.printStackTrace();
+        }
+      } catch (InvalidKeyException e) {
+        e.printStackTrace();
+      }
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (NoSuchProviderException e) {
+      e.printStackTrace();
+    }
+
+    Log.v(TAG, "generateSignature: numBytesSigned=[" + numBytesSigned + "]");
   }
 }
