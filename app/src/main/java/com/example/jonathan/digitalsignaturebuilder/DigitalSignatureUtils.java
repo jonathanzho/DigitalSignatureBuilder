@@ -11,14 +11,19 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.InvalidKeyException;
+import java.security.Key;
 import java.security.KeyFactory;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Signature;
 import java.security.SignatureException;
+import java.security.spec.ECPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Arrays;
 
 public class DigitalSignatureUtils {
@@ -50,65 +55,104 @@ public class DigitalSignatureUtils {
       inSignature[byteCount++] = timestampBytes[i];
     }
 
-    PrivateKey privateKey = importPrivateKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_FILE_PATH,
-        ConstantsUtils.ACCESS_SIGNATURE_TYPE);
+    PrivateKey privateKey = (PrivateKey) importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_FILE_PATH,
+        ConstantsUtils.ACCESS_SIGNATURE_TYPE, ConstantsUtils.PRIVATE_KEY_TYPE);
 
-    byte[] outSignature = inSignature;
-/*
     byte[] outSignature = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         privateKey,
         inSignature);
-*/
+
     return outSignature;
   }
 
-  public static void decodeSignature(final byte[] signature) {
-    Log.d(TAG, "decodeSignature: signature.length=[" + signature.length + "]");
+  public static void decodeSignature(final byte[] inSignature,
+                                     final String algorithm,
+                                     final String provider,
+                                     final PublicKey publicKey) {
+    Log.d(TAG, "decodeSignature: inSignature.length=[" + inSignature.length + "], algorithm=[" + algorithm +
+        "], provider=[" + provider + "], publicKey=[" + publicKey + "]");
 
-    boolean allowed = signature[0] != 0;
+    Signature signature = null;
+    try {
+      signature = Signature.getInstance(algorithm, provider);
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    } catch (NoSuchProviderException e) {
+      e.printStackTrace();
+    }
 
-    byte[] imeiBytes = Arrays.copyOfRange(signature, 1, 16);
+    try {
+      signature.initVerify(publicKey);
+    } catch (InvalidKeyException e) {
+      e.printStackTrace();
+    }
+
+    try {
+      signature.update(inSignature, 0, inSignature.length);
+    } catch (SignatureException e) {
+      e.printStackTrace();
+    }
+
+    try {
+      boolean verified = signature.verify(inSignature);
+
+      Log.v(TAG, "decodeSignature: verified=[" + verified + "]");
+    } catch (SignatureException e) {
+      e.printStackTrace();
+    }
+
+
+    boolean allowed = inSignature[0] != 0;
+
+    byte[] imeiBytes = Arrays.copyOfRange(inSignature, 1, 16);
     String imei = new String(imeiBytes);
 
-    byte[] timestampBytes = Arrays.copyOfRange(signature, 16, 20);
+    byte[] timestampBytes = Arrays.copyOfRange(inSignature, 16, 20);
     int timestamp = bytesToIntBE(timestampBytes);
 
     Log.v(TAG, "decodeSignature: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
   }
 
-  private static PrivateKey importPrivateKeyFromFile(final String filePath, final String type) {
-    Log.d(TAG, "importPrivateKeyFromFile: filePath={" + filePath + "], type=[" + type + "]");
+  public static Key importKeyFromFile(final String filePath, final String signatureType, final int keyType) {
+    Log.d(TAG, "importKeyFromFile: filePath={" + filePath + "], signatureType=[" + signatureType + "], keyType=[" + keyType + "]");
 
-    PrivateKey privateKey = null;
+    Key key = null;
 
     Path path = Paths.get(filePath);
 
     try {
-      byte[] privateBytes = Files.readAllBytes(path);
+      byte[] keyBytes = Files.readAllBytes(path);
 
-      PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateBytes);
+      KeySpec keySpec = null;
+      if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
+        keySpec = new X509EncodedKeySpec(keyBytes);
+      } else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
+        keySpec = new PKCS8EncodedKeySpec(keyBytes);
+      }
 
       try {
-        KeyFactory keyFactory = KeyFactory.getInstance(type);
+        KeyFactory keyFactory = KeyFactory.getInstance(signatureType);
 
         try {
-          privateKey = keyFactory.generatePrivate(keySpec);
+          if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
+            key = keyFactory.generatePublic(keySpec);
+          } else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
+            key = keyFactory.generatePrivate(keySpec);
+          }
         } catch (InvalidKeySpecException e) {
           e.printStackTrace();
         }
       } catch (NoSuchAlgorithmException e) {
         e.printStackTrace();
       }
-
-
     } catch (IOException e) {
       e.printStackTrace();
     }
 
-    Log.v(TAG, "importPrivateKeyFromFile: privateKey={" + privateKey + "]");
+    Log.v(TAG, "importKeyFromFile: key={" + key + "]");
 
-    return privateKey;
+    return key;
   }
 
   private static byte[] generateSignature(final String algorithm,

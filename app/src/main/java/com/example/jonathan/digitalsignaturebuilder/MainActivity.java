@@ -6,6 +6,9 @@ import android.util.Log;
 
 import com.example.jonathan.digitalsignaturebuilder.utils.ConstantsUtils;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
+
 public class MainActivity extends AppCompatActivity {
   private static final String TAG = ConstantsUtils.APP_TAG + MainActivity.class.getSimpleName();
 
@@ -20,6 +23,12 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.TEST_IMEI,
         ConstantsUtils.TEST_IMESTAMP);
 
-    DigitalSignatureUtils.decodeSignature(signature);
+    PublicKey publicKey = (PublicKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_FILE_PATH,
+        ConstantsUtils.ACCESS_SIGNATURE_TYPE, ConstantsUtils.PUBLIC_KEY_TYPE);
+
+    DigitalSignatureUtils.decodeSignature(signature,
+        ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
+        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
+        publicKey);
   }
 }
