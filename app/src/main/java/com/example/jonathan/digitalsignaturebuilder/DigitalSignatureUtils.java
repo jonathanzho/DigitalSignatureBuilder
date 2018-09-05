@@ -49,10 +49,10 @@ public class DigitalSignatureUtils {
     for (int i = 0; i < timestampBytes.length; i++) {
       signature[byteCount++] = timestampBytes[i];
     }
-/* ???
+
     PrivateKey privateKey = importPrivateKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE);
-
+/*
     generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         privateKey,
