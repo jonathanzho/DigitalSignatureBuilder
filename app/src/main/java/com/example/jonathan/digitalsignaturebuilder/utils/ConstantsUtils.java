@@ -10,8 +10,13 @@ public class ConstantsUtils {
   public static final int PUBLIC_KEY_TYPE = 1;
   public static final int PRIVATE_KEY_TYPE = 2;
 
-  public static final String ACCESS_PUBLIC_KEY_FILE_PATH = "/sdcard/Download/access-public-key.der";
-  public static final String ACCESS_PRIVATE_KEY_FILE_PATH = "/sdcard/Download/access-private-key.der";
+  public static final int PEM_FILE_FORMAT = 1;
+  public static final int DER_FILE_FORMAT = 2;
+
+  public static final String ACCESS_PUBLIC_KEY_DER_FILE_PATH = "/sdcard/Download/access-public-key.der";
+  public static final String ACCESS_PRIVATE_KEY_DER_FILE_PATH = "/sdcard/Download/access-private-key.der";
+  public static final String ACCESS_PUBLIC_KEY_PEM_FILE_PATH = "/sdcard/Download/access-public-key.pem";
+  public static final String ACCESS_PRIVATE_KEY_PEM_FILE_PATH = "/sdcard/Download/access-private-key.pem";
   public static final String ACCESS_SIGNATURE_TYPE = "EC";
   public static final String ACCESS_SIGNATURE_ALGORITHM = "SHA256withECDSA";
   public static final String ACCESS_SIGNATURE_PROVIDER = "BC";
