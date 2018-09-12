@@ -18,18 +18,22 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    byte [] signature = DigitalSignatureUtils.encodeSignature(ConstantsUtils.TEST_ALLOWED,
+    byte[] dataBytes = DigitalSignatureUtils.encodeData(ConstantsUtils.TEST_ALLOWED,
         ConstantsUtils.TEST_IMEI,
         ConstantsUtils.TEST_IMESTAMP);
+
+    byte[] signedData = DigitalSignatureUtils.signData(dataBytes);
 
     PublicKey publicKey = (PublicKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PUBLIC_KEY_TYPE,
         ConstantsUtils.DER_FILE_FORMAT);
 
-    DigitalSignatureUtils.decodeSignature(signature,
+    DigitalSignatureUtils.verifyData(signedData,
         ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         publicKey);
+
+    DigitalSignatureUtils.decodeData(dataBytes);
   }
 }

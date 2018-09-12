@@ -36,43 +36,49 @@ public class DigitalSignatureUtils {
     return ByteBuffer.wrap(inBytes).getInt();    // Big Endian by default
   }
 
-  public static byte[] encodeSignature(final boolean allowed, final String imei, final int timestamp) {
-    Log.d(TAG, "encodeSignature: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
+  public static byte[] encodeData(final boolean allowed, final String imei, final int timestamp) {
+    Log.d(TAG, "encodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
 
-    byte[] inSignature = new byte[20];
+    byte[] dataBytes = new byte[20];
 
     int byteCount = 0;
 
-    inSignature[byteCount++] = (byte) (allowed ? 1 : 0);
+    dataBytes[byteCount++] = (byte) (allowed ? 1 : 0);
 
     for (int i = 0; i < imei.length(); i++) {
-      inSignature[byteCount++] = (byte) imei.charAt(i);
+      dataBytes[byteCount++] = (byte) imei.charAt(i);
     }
 
     byte[] timestampBytes = intToBytesBE(timestamp);
     for (int i = 0; i < timestampBytes.length; i++) {
-      inSignature[byteCount++] = timestampBytes[i];
+      dataBytes[byteCount++] = timestampBytes[i];
     }
 
+    return dataBytes;
+  }
+
+  public static byte[] signData(final byte[] dataBytes) {
     PrivateKey privateKey = (PrivateKey) importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PRIVATE_KEY_TYPE,
         ConstantsUtils.DER_FILE_FORMAT);
 
-    byte[] outSignature = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
+    byte[] signedData = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         privateKey,
-        inSignature);
+        dataBytes);
 
-    return outSignature;
+    return signedData;
   }
 
-  public static void decodeSignature(final byte[] inSignature,
-                                     final String algorithm,
-                                     final String provider,
-                                     final PublicKey publicKey) {
-    Log.d(TAG, "decodeSignature: inSignature.length=[" + inSignature.length + "], algorithm=[" + algorithm +
+  public static boolean verifyData(final byte[] inSignature,
+                                   final String algorithm,
+                                   final String provider,
+                                   final PublicKey publicKey) {
+    Log.d(TAG, "verifyData: inSignature.length=[" + inSignature.length + "], algorithm=[" + algorithm +
         "], provider=[" + provider + "], publicKey=[" + publicKey + "]");
+
+    boolean verified = false;
 
     Signature signature = null;
     try {
@@ -96,23 +102,26 @@ public class DigitalSignatureUtils {
     }
 
     try {
-      boolean verified = signature.verify(inSignature);
+      verified = signature.verify(inSignature);
 
       Log.v(TAG, "decodeSignature: verified=[" + verified + "]");
     } catch (SignatureException e) {
       e.printStackTrace();
     }
 
+    return verified;
+  }
 
-    boolean allowed = inSignature[0] != 0;
+  public static void decodeData(final byte[] dataBytes) {
+    boolean allowed = dataBytes[0] != 0;
 
-    byte[] imeiBytes = Arrays.copyOfRange(inSignature, 1, 16);
+    byte[] imeiBytes = Arrays.copyOfRange(dataBytes, 1, 16);
     String imei = new String(imeiBytes);
 
-    byte[] timestampBytes = Arrays.copyOfRange(inSignature, 16, 20);
+    byte[] timestampBytes = Arrays.copyOfRange(dataBytes, 16, 20);
     int timestamp = bytesToIntBE(timestampBytes);
 
-    Log.v(TAG, "decodeSignature: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
+    Log.v(TAG, "decodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
   }
 
   public static Key importKeyFromFile(final String filePath,
@@ -139,7 +148,14 @@ public class DigitalSignatureUtils {
     if (fileFormat == ConstantsUtils.PEM_FILE_FORMAT) {
       keySpec = new X509EncodedKeySpec(keyBytes);
     } else if (fileFormat == ConstantsUtils.DER_FILE_FORMAT) {
-      keySpec = new PKCS8EncodedKeySpec(keyBytes);
+      // JZ Test: This cause verify() to be false:
+      if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
+        keySpec = new X509EncodedKeySpec(keyBytes);
+      } else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
+        keySpec = new PKCS8EncodedKeySpec(keyBytes);
+      }
+      // This causes invaid key spec error:
+      //keySpec = new PKCS8EncodedKeySpec(keyBytes);
     }
 
     KeyFactory keyFactory = null;
