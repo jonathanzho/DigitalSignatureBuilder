@@ -54,10 +54,14 @@ public class DigitalSignatureUtils {
       dataBytes[byteCount++] = timestampBytes[i];
     }
 
+    Log.v(TAG, "encodeData: dataBytes.length=[" + dataBytes.length + "]");
+
     return dataBytes;
   }
 
   public static byte[] signData(final byte[] dataBytes) {
+    Log.d(TAG, "signData: dataBytes.length=[" + dataBytes.length + "]");
+
     PrivateKey privateKey = (PrivateKey) importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PRIVATE_KEY_TYPE,
@@ -71,11 +75,11 @@ public class DigitalSignatureUtils {
     return signedData;
   }
 
-  public static boolean verifyData(final byte[] inSignature,
+  public static boolean verifyData(final byte[] signedData,
                                    final String algorithm,
                                    final String provider,
                                    final PublicKey publicKey) {
-    Log.d(TAG, "verifyData: inSignature.length=[" + inSignature.length + "], algorithm=[" + algorithm +
+    Log.d(TAG, "verifyData: signedData.length=[" + signedData.length + "], algorithm=[" + algorithm +
         "], provider=[" + provider + "], publicKey=[" + publicKey + "]");
 
     boolean verified = false;
@@ -96,15 +100,15 @@ public class DigitalSignatureUtils {
     }
 
     try {
-      signature.update(inSignature, 0, inSignature.length);
+      signature.update(signedData, 0, signedData.length);
     } catch (SignatureException e) {
       e.printStackTrace();
     }
 
     try {
-      verified = signature.verify(inSignature);
+      verified = signature.verify(signedData);
 
-      Log.v(TAG, "decodeSignature: verified=[" + verified + "]");
+      Log.v(TAG, "verifyData: verified=[" + verified + "]");
     } catch (SignatureException e) {
       e.printStackTrace();
     }
@@ -113,6 +117,8 @@ public class DigitalSignatureUtils {
   }
 
   public static void decodeData(final byte[] dataBytes) {
+    Log.d(TAG, "decodeData: dataBytes.length=[" + dataBytes.length + "]");
+
     boolean allowed = dataBytes[0] != 0;
 
     byte[] imeiBytes = Arrays.copyOfRange(dataBytes, 1, 16);
@@ -183,20 +189,20 @@ public class DigitalSignatureUtils {
   private static byte[] generateSignature(final String algorithm,
                                           final String provider,
                                           final PrivateKey privateKey,
-                                          final byte[] inSignature) {
+                                          final byte[] dataBytes) {
     Log.d(TAG, "generateSignature: algorithm=[" + algorithm + "], provider=[" + provider + "], privateKey=[" +
-        privateKey + "], inSignature.length=[" + inSignature.length + "]");
+        privateKey + "], dataBytes.length=[" + dataBytes.length + "]");
 
-    byte[] outSignature = null;
+    byte[] signedData = null;
 
     try {
       Signature signature = Signature.getInstance(algorithm, provider);
       try {
         signature.initSign(privateKey);
         try {
-          signature.update(inSignature);
+          signature.update(dataBytes);
 
-          outSignature = signature.sign();
+          signedData = signature.sign();
         } catch (SignatureException e) {
           e.printStackTrace();
         }
@@ -209,8 +215,8 @@ public class DigitalSignatureUtils {
       e.printStackTrace();
     }
 
-    Log.v(TAG, "generateSignature: outSignature.length=[" + outSignature.length + "]");
+    Log.v(TAG, "generateSignature: signedData.length=[" + signedData.length + "]");
 
-    return outSignature;
+    return signedData;
   }
 }
