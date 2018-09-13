@@ -24,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.TEST_IMESTAMP);
 
     // https://stackoverflow.com/questions/11410770/load-rsa-public-key-from-file
-    PrivateKey privateKey = (PrivateKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
+    PrivateKey privateKey = DigitalSignatureUtils.importPrivateKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PRIVATE_KEY_TYPE,
         ConstantsUtils.PKCS8_ENCODED_KEY_SPEC_TYPE,
@@ -36,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER);
 
     // https://stackoverflow.com/questions/11410770/load-rsa-public-key-from-file
-    PublicKey publicKey = (PublicKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_DER_FILE_PATH,
+    PublicKey publicKey = DigitalSignatureUtils.importPublicKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PUBLIC_KEY_TYPE,
         ConstantsUtils.X509_ENCODED_KEY_SPEC_TYPE,
