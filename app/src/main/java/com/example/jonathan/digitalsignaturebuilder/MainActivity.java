@@ -6,6 +6,7 @@ import android.util.Log;
 
 import com.example.jonathan.digitalsignaturebuilder.utils.ConstantsUtils;
 
+import java.security.PrivateKey;
 import java.security.PublicKey;
 
 public class MainActivity extends AppCompatActivity {
@@ -22,11 +23,18 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.TEST_IMEI,
         ConstantsUtils.TEST_IMESTAMP);
 
-    byte[] signedData = DigitalSignatureUtils.signData(dataBytes);
+    PrivateKey privateKey = (PrivateKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
+        ConstantsUtils.ACCESS_SIGNATURE_TYPE,
+        ConstantsUtils.PRIVATE_KEY_TYPE,
+        ConstantsUtils.PKCS8_ENCODED_KEY_SPEC_TYPE,
+        ConstantsUtils.DER_FILE_FORMAT);
+
+    byte[] signedData = DigitalSignatureUtils.signData(dataBytes, privateKey);
 
     PublicKey publicKey = (PublicKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_DER_FILE_PATH,
         ConstantsUtils.ACCESS_SIGNATURE_TYPE,
         ConstantsUtils.PUBLIC_KEY_TYPE,
+        ConstantsUtils.X509_ENCODED_KEY_SPEC_TYPE,    // ???
         ConstantsUtils.DER_FILE_FORMAT);
 
     DigitalSignatureUtils.verifyData(signedData,

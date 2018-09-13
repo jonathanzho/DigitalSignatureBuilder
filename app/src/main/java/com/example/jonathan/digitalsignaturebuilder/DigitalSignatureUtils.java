@@ -39,38 +39,33 @@ public class DigitalSignatureUtils {
   public static byte[] encodeData(final boolean allowed, final String imei, final int timestamp) {
     Log.d(TAG, "encodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
 
-    byte[] dataBytes = new byte[20];
+    byte[] origData = new byte[20];
 
     int byteCount = 0;
 
-    dataBytes[byteCount++] = (byte) (allowed ? 1 : 0);
+    origData[byteCount++] = (byte) (allowed ? 1 : 0);
 
     for (int i = 0; i < imei.length(); i++) {
-      dataBytes[byteCount++] = (byte) imei.charAt(i);
+      origData[byteCount++] = (byte) imei.charAt(i);
     }
 
     byte[] timestampBytes = intToBytesBE(timestamp);
     for (int i = 0; i < timestampBytes.length; i++) {
-      dataBytes[byteCount++] = timestampBytes[i];
+      origData[byteCount++] = timestampBytes[i];
     }
 
-    Log.v(TAG, "encodeData: dataBytes.length=[" + dataBytes.length + "]");
+    Log.v(TAG, "encodeData: origData.length=[" + origData.length + "]");
 
-    return dataBytes;
+    return origData;
   }
 
-  public static byte[] signData(final byte[] dataBytes) {
-    Log.d(TAG, "signData: dataBytes.length=[" + dataBytes.length + "]");
-
-    PrivateKey privateKey = (PrivateKey) importKeyFromFile(ConstantsUtils.ACCESS_PRIVATE_KEY_DER_FILE_PATH,
-        ConstantsUtils.ACCESS_SIGNATURE_TYPE,
-        ConstantsUtils.PRIVATE_KEY_TYPE,
-        ConstantsUtils.DER_FILE_FORMAT);
+  public static byte[] signData(final byte[] origData, final PrivateKey privateKey) {
+    Log.d(TAG, "signData: origData.length=[" + origData.length + "]");
 
     byte[] signedData = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         privateKey,
-        dataBytes);
+        origData);
 
     return signedData;
   }
@@ -116,15 +111,15 @@ public class DigitalSignatureUtils {
     return verified;
   }
 
-  public static void decodeData(final byte[] dataBytes) {
-    Log.d(TAG, "decodeData: dataBytes.length=[" + dataBytes.length + "]");
+  public static void decodeData(final byte[] origData) {
+    Log.d(TAG, "decodeData: origData.length=[" + origData.length + "]");
 
-    boolean allowed = dataBytes[0] != 0;
+    boolean allowed = origData[0] != 0;
 
-    byte[] imeiBytes = Arrays.copyOfRange(dataBytes, 1, 16);
+    byte[] imeiBytes = Arrays.copyOfRange(origData, 1, 16);
     String imei = new String(imeiBytes);
 
-    byte[] timestampBytes = Arrays.copyOfRange(dataBytes, 16, 20);
+    byte[] timestampBytes = Arrays.copyOfRange(origData, 16, 20);
     int timestamp = bytesToIntBE(timestampBytes);
 
     Log.v(TAG, "decodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
@@ -132,10 +127,11 @@ public class DigitalSignatureUtils {
 
   public static Key importKeyFromFile(final String filePath,
                                       final String signatureType,
-                                      final int keyType,
-                                      final int fileFormat) {
+                                      final String keyType,
+                                      final String encodedKeySpecType,
+                                      final String fileFormat) {
     Log.d(TAG, "importKeyFromFile: filePath={" + filePath + "], signatureType=[" + signatureType +
-        "], keyType=[" + keyType + "], fileFormat=[" + fileFormat + "]");
+        "], keyType=[" + keyType + "], encodedKeySpecType=[" + encodedKeySpecType + "], fileFormat=[" + fileFormat + "]");
 
     Key key = null;
 
@@ -151,17 +147,13 @@ public class DigitalSignatureUtils {
     Log.v(TAG, "importKeyFromFile: keyBytes.length=[" + keyBytes.length + "]");
 
     KeySpec keySpec = null;
-    if (fileFormat == ConstantsUtils.PEM_FILE_FORMAT) {
+    if (encodedKeySpecType.equals(ConstantsUtils.X509_ENCODED_KEY_SPEC_TYPE)) {
       keySpec = new X509EncodedKeySpec(keyBytes);
-    } else if (fileFormat == ConstantsUtils.DER_FILE_FORMAT) {
-      // JZ Test: This cause verify() to be false:
-      if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
-        keySpec = new X509EncodedKeySpec(keyBytes);
-      } else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
-        keySpec = new PKCS8EncodedKeySpec(keyBytes);
-      }
-      // This causes invaid key spec error:
-      //keySpec = new PKCS8EncodedKeySpec(keyBytes);
+    } else if (encodedKeySpecType.equals(ConstantsUtils.PKCS8_ENCODED_KEY_SPEC_TYPE)) {
+      keySpec = new PKCS8EncodedKeySpec(keyBytes);
+    } else {
+      Log.e(TAG, "importKeyFrom Type: Unsupported encodeKeySpecType=[" + encodedKeySpecType + "]");
+      return null;
     }
 
     KeyFactory keyFactory = null;
@@ -189,9 +181,9 @@ public class DigitalSignatureUtils {
   private static byte[] generateSignature(final String algorithm,
                                           final String provider,
                                           final PrivateKey privateKey,
-                                          final byte[] dataBytes) {
+                                          final byte[] origData) {
     Log.d(TAG, "generateSignature: algorithm=[" + algorithm + "], provider=[" + provider + "], privateKey=[" +
-        privateKey + "], dataBytes.length=[" + dataBytes.length + "]");
+        privateKey + "], origData.length=[" + origData.length + "]");
 
     byte[] signedData = null;
 
@@ -200,7 +192,7 @@ public class DigitalSignatureUtils {
       try {
         signature.initSign(privateKey);
         try {
-          signature.update(dataBytes);
+          signature.update(origData);
 
           signedData = signature.sign();
         } catch (SignatureException e) {
