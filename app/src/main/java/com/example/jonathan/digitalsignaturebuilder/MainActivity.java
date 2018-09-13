@@ -19,7 +19,7 @@ public class MainActivity extends AppCompatActivity {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
 
-    byte[] dataBytes = DigitalSignatureUtils.encodeData(ConstantsUtils.TEST_ALLOWED,
+    byte[] origData = DigitalSignatureUtils.encodeData(ConstantsUtils.TEST_ALLOWED,
         ConstantsUtils.TEST_IMEI,
         ConstantsUtils.TEST_IMESTAMP);
 
@@ -30,7 +30,10 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.PKCS8_ENCODED_KEY_SPEC_TYPE,
         ConstantsUtils.DER_FILE_FORMAT);
 
-    byte[] signedData = DigitalSignatureUtils.signData(dataBytes, privateKey);
+    byte[] signedData = DigitalSignatureUtils.signData(origData,
+        privateKey,
+        ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
+        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER);
 
     // https://stackoverflow.com/questions/11410770/load-rsa-public-key-from-file
     PublicKey publicKey = (PublicKey) DigitalSignatureUtils.importKeyFromFile(ConstantsUtils.ACCESS_PUBLIC_KEY_DER_FILE_PATH,
@@ -44,6 +47,6 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
         publicKey);
 
-    DigitalSignatureUtils.decodeData(dataBytes);
+    DigitalSignatureUtils.decodeData(origData);
   }
 }

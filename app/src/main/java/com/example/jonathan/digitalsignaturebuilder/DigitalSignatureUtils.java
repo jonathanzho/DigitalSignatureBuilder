@@ -59,13 +59,12 @@ public class DigitalSignatureUtils {
     return origData;
   }
 
-  public static byte[] signData(final byte[] origData, final PrivateKey privateKey) {
-    Log.d(TAG, "signData: origData.length=[" + origData.length + "]");
+  public static byte[] signData(final byte[] origData, final PrivateKey privateKey,
+                                final String algorithm, final String provider) {
+    Log.d(TAG, "signData: origData.length=[" + origData.length + "], algorithm=[" +
+        algorithm + "], provider=[" + provider + "]");
 
-    byte[] signedData = generateSignature(ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
-        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
-        privateKey,
-        origData);
+    byte[] signedData = generateSignature(algorithm, provider, privateKey, origData);
 
     return signedData;
   }
