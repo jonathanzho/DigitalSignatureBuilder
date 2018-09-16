@@ -43,9 +43,9 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.DER_FILE_FORMAT);
 
     DigitalSignatureUtils.verifyData(signedData,
+        publicKey,
         ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
-        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER,
-        publicKey);
+        ConstantsUtils.ACCESS_SIGNATURE_PROVIDER);
 
     DigitalSignatureUtils.decodeData(origData);
   }

@@ -59,22 +59,67 @@ public class DigitalSignatureUtils {
     return origData;
   }
 
-  public static byte[] signData(final byte[] origData, final PrivateKey privateKey,
-                                final String algorithm, final String provider) {
+  public static void decodeData(final byte[] origData) {
+    Log.d(TAG, "decodeData: origData.length=[" + origData.length + "]");
+
+    boolean allowed = origData[0] != 0;
+
+    byte[] imeiBytes = Arrays.copyOfRange(origData, 1, 16);
+    String imei = new String(imeiBytes);
+
+    byte[] timestampBytes = Arrays.copyOfRange(origData, 16, 20);
+    int timestamp = bytesToIntBE(timestampBytes);
+
+    Log.v(TAG, "decodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
+  }
+
+  public static byte[] signData(final byte[] origData,
+                                final PrivateKey privateKey,
+                                final String algorithm,
+                                final String provider) {
     Log.d(TAG, "signData: origData.length=[" + origData.length + "], algorithm=[" +
         algorithm + "], provider=[" + provider + "]");
 
-    byte[] signedData = generateSignature(algorithm, provider, privateKey, origData);
+    byte[] signedData = null;
+
+    Signature signature = null;
+    try {
+      signature = Signature.getInstance(algorithm, provider);
+    } catch (NoSuchProviderException e) {
+      e.printStackTrace();
+    } catch (NoSuchAlgorithmException e) {
+      e.printStackTrace();
+    }
+
+    try {
+      signature.initSign(privateKey);
+    } catch (InvalidKeyException e) {
+      e.printStackTrace();
+    }
+
+    try {
+      signature.update(origData);
+    } catch (SignatureException e) {
+      e.printStackTrace();
+    }
+
+    try {
+      signedData = signature.sign();
+    } catch (SignatureException e) {
+      e.printStackTrace();
+    }
+
+    Log.v(TAG, "generateSignature: signedData.length=[" + signedData.length + "]");
 
     return signedData;
   }
 
   public static boolean verifyData(final byte[] signedData,
+                                   final PublicKey publicKey,
                                    final String algorithm,
-                                   final String provider,
-                                   final PublicKey publicKey) {
-    Log.d(TAG, "verifyData: signedData.length=[" + signedData.length + "], algorithm=[" + algorithm +
-        "], provider=[" + provider + "], publicKey=[" + publicKey + "]");
+                                   final String provider) {
+    Log.d(TAG, "verifyData: signedData.length=[" + signedData.length + "], publicKey=[" +
+        publicKey + "], algorithm=[" + algorithm + "], provider=[" + provider + "]");
 
     boolean verified = false;
 
@@ -110,20 +155,7 @@ public class DigitalSignatureUtils {
     return verified;
   }
 
-  public static void decodeData(final byte[] origData) {
-    Log.d(TAG, "decodeData: origData.length=[" + origData.length + "]");
-
-    boolean allowed = origData[0] != 0;
-
-    byte[] imeiBytes = Arrays.copyOfRange(origData, 1, 16);
-    String imei = new String(imeiBytes);
-
-    byte[] timestampBytes = Arrays.copyOfRange(origData, 16, 20);
-    int timestamp = bytesToIntBE(timestampBytes);
-
-    Log.v(TAG, "decodeData: allowed=[" + allowed + "], imei=[" + imei + "], timestamp=[" + timestamp + "]");
-  }
-
+  // ??? Can this method handle the import of both public and private keys?
   public static Key importKeyFromFile(final String filePath,
                                       final String signatureType,
                                       final String keyType,
@@ -178,10 +210,10 @@ public class DigitalSignatureUtils {
   }
 
   public static PrivateKey importPrivateKeyFromFile(final String filePath,
-                                      final String signatureType,
-                                      final String keyType,
-                                      final String encodedKeySpecType,
-                                      final String fileFormat) {
+                                                    final String signatureType,
+                                                    final String keyType,
+                                                    final String encodedKeySpecType,
+                                                    final String fileFormat) {
     Log.d(TAG, "importPrivateKeyFromFile: filePath={" + filePath + "], signatureType=[" + signatureType +
         "], keyType=[" + keyType + "], encodedKeySpecType=[" + encodedKeySpecType + "], fileFormat=[" + fileFormat + "]");
 
@@ -219,7 +251,7 @@ public class DigitalSignatureUtils {
       //if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
       //  key = keyFactory.generatePublic(keySpec);
       //} else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
-        key = keyFactory.generatePrivate(keySpec);
+      key = keyFactory.generatePrivate(keySpec);
       //}
     } catch (InvalidKeySpecException e) {
       e.printStackTrace();
@@ -231,10 +263,10 @@ public class DigitalSignatureUtils {
   }
 
   public static PublicKey importPublicKeyFromFile(final String filePath,
-                                                    final String signatureType,
-                                                    final String keyType,
-                                                    final String encodedKeySpecType,
-                                                    final String fileFormat) {
+                                                  final String signatureType,
+                                                  final String keyType,
+                                                  final String encodedKeySpecType,
+                                                  final String fileFormat) {
     Log.d(TAG, "importPublicKeyFromFile: filePath={" + filePath + "], signatureType=[" + signatureType +
         "], keyType=[" + keyType + "], encodedKeySpecType=[" + encodedKeySpecType + "], fileFormat=[" + fileFormat + "]");
 
@@ -270,7 +302,7 @@ public class DigitalSignatureUtils {
 
     try {
       //if (keyType == ConstantsUtils.PUBLIC_KEY_TYPE) {
-        key = keyFactory.generatePublic(keySpec);
+      key = keyFactory.generatePublic(keySpec);
       //} else if (keyType == ConstantsUtils.PRIVATE_KEY_TYPE) {
       //key = keyFactory.generatePrivate(keySpec);
       //}
@@ -281,39 +313,5 @@ public class DigitalSignatureUtils {
     Log.v(TAG, "importPublicKeyFromFile: key=[" + key + "]");
 
     return key;
-  }
-
-  private static byte[] generateSignature(final String algorithm,
-                                          final String provider,
-                                          final PrivateKey privateKey,
-                                          final byte[] origData) {
-    Log.d(TAG, "generateSignature: algorithm=[" + algorithm + "], provider=[" + provider + "], privateKey=[" +
-        privateKey + "], origData.length=[" + origData.length + "]");
-
-    byte[] signedData = null;
-
-    try {
-      Signature signature = Signature.getInstance(algorithm, provider);
-      try {
-        signature.initSign(privateKey);
-        try {
-          signature.update(origData);
-
-          signedData = signature.sign();
-        } catch (SignatureException e) {
-          e.printStackTrace();
-        }
-      } catch (InvalidKeyException e) {
-        e.printStackTrace();
-      }
-    } catch (NoSuchAlgorithmException e) {
-      e.printStackTrace();
-    } catch (NoSuchProviderException e) {
-      e.printStackTrace();
-    }
-
-    Log.v(TAG, "generateSignature: signedData.length=[" + signedData.length + "]");
-
-    return signedData;
   }
 }
