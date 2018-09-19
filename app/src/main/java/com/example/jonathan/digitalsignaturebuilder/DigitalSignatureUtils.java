@@ -114,12 +114,14 @@ public class DigitalSignatureUtils {
     return signedData;
   }
 
-  public static boolean verifyData(final byte[] signedData,
+  public static boolean verifyData(final byte[] origData,
+                                   final byte[] signedData,
                                    final PublicKey publicKey,
                                    final String algorithm,
                                    final String provider) {
-    Log.d(TAG, "verifyData: signedData.length=[" + signedData.length + "], publicKey=[" +
-        publicKey + "], algorithm=[" + algorithm + "], provider=[" + provider + "]");
+    Log.d(TAG, "verifyData: origData.length=[" + origData.length + "], signedData.length=[" +
+        signedData.length + "], publicKey=[" + publicKey + "], algorithm=[" + algorithm + "], provider=[" +
+        provider + "]");
 
     boolean verified = false;
 
@@ -139,7 +141,7 @@ public class DigitalSignatureUtils {
     }
 
     try {
-      signature.update(signedData, 0, signedData.length);
+      signature.update(origData, 0, origData.length);
     } catch (SignatureException e) {
       e.printStackTrace();
     }

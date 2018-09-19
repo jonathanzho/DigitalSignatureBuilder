@@ -42,7 +42,8 @@ public class MainActivity extends AppCompatActivity {
         ConstantsUtils.X509_ENCODED_KEY_SPEC_TYPE,
         ConstantsUtils.DER_FILE_FORMAT);
 
-    DigitalSignatureUtils.verifyData(signedData,
+    DigitalSignatureUtils.verifyData(origData,
+        signedData,
         publicKey,
         ConstantsUtils.ACCESS_SIGNATURE_ALGORITHM,
         ConstantsUtils.ACCESS_SIGNATURE_PROVIDER);
